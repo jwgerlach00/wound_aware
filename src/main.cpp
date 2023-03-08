@@ -13,8 +13,8 @@ int buzzPin = PB2;
 
 int periWoundTempPin = PC0;
 int woundTempPin = PC1;
-int impedancePin1 = ADC6;
-int impedancePin2 = ADC7;
+int impedancePin1 = ADCH6; // ADC6
+int impedancePin2 = ADCH7; // ADC7
 
 int ADCBits = 1023; // 10-bit ADC
 
@@ -59,29 +59,6 @@ void setup() {
 
   loopStartTime = millis();
 }
-
-void loop() {
-  currentTime = millis();
-  if (currentTime >= (loopStartTime + fiveMins)) { // Only enter if its been 5 mins since last run
-    loopStartTime = millis(); // Reset
-    main();
-  }
-}
-
-void main() {
-  measureImpedance();
-  measureTemp();
-  check72Hour();
-}
-
-// void powerOffDevice() {
-//   // Turn off buzzers and LED lights
-//   digitalWrite(pwrLEDPin, LOW);
-//   digitalWrite(tempLEDPin, LOW);
-//   digitalWrite(moistLEDPin, LOW);
-//   digitalWrite(timeLEDPin, LOW);
-//   digitalWrite(buzzPin, LOW);
-// }
 
 float calcImpedance() {
   /*
@@ -160,6 +137,27 @@ void check72Hour() {
     // turnOff();
   }
 }
+
+void loop() {
+  currentTime = millis();
+  if (currentTime >= (loopStartTime + fiveMins)) { // Only enter if its been 5 mins since last run
+    loopStartTime = millis(); // Reset
+    measureImpedance();
+    measureTemp();
+    check72Hour();
+  }
+}
+
+
+
+// void powerOffDevice() {
+//   // Turn off buzzers and LED lights
+//   digitalWrite(pwrLEDPin, LOW);
+//   digitalWrite(tempLEDPin, LOW);
+//   digitalWrite(moistLEDPin, LOW);
+//   digitalWrite(timeLEDPin, LOW);
+//   digitalWrite(buzzPin, LOW);
+// }
 
 // void turnOff() {
 //   EEPROM.read(pwrAddress) == 0; // Mark as turned off
