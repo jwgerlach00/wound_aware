@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <helpers.h>
+
 
 unsigned long startTime = millis();
 unsigned long loopStartTime;
@@ -16,16 +18,9 @@ int woundTempPin = PC1;
 int impedancePin1 = PC2;
 int impedancePin2 = PC3;
 
-int ADCBits = 1023; // 10-bit ADC
-
-float RImpedance = 220; // 220 Ohms
-
 int pwrAddress = 0;
 int impedanceAddress = 1;
 int tempAddress = 2;
-
-int fiveMins = 5*60*1000;
-int seventyTwoHours = 72*60*60*1000;
 
 int impedanceThres = 50000; // kOhms
 float tempThres = 1.5; // degrees C
@@ -51,90 +46,20 @@ void setup() {
   pinMode(impedancePin1, INPUT);
   pinMode(impedancePin2, INPUT);
 
-  // if (EEPROM.read(pwrAddress) == 255) { // If turned on previously
-  //   powerOffDevice();
-  // } else {
   digitalWrite(pwrLEDPin, HIGH); // Turn on power indicator light
   EEPROM.write(pwrAddress, 0); // Mark as turned on
 
   loopStartTime = millis();
 }
 
-float calcImpedance() {
-  /*
-    Ratio max of 1024
-    1024*220 = 225280 which is greater than impedanceThres
-  */
-  return float((analogRead(impedancePin2) + 1) / (analogRead(impedancePin1) + 1)) * RImpedance;
-
-}
-
-void measureImpedance() {
-  // If impedance is greater than 50kOhms
-  if (calcImpedance() > impedanceThres) {
-    if (EEPROM.read(impedanceAddress) == 255) { // This means this is the first measurement (empty EEPROM)
-      EEPROM.write(impedanceAddress, 1);
-    } else { // Increment impedance count
-      EEPROM.write(impedanceAddress, EEPROM.read(1) + 1);
-    }
-    // If impedance count is greater than or equal to 12
-    if (EEPROM.read(impedanceAddress) >= impedanceWindowSize) {
-      // Turn on moisture indicator light and audio signal
-      digitalWrite(moistLEDPin, HIGH);
-      digitalWrite(buzzPin, HIGH);
-    }
-  }
-  else { // Clear impedance counts if impedance within proper range
-    EEPROM.write(impedanceAddress, 0);
-  }
-}
-
-float tempConversion(float tempAnalog) {
-  return map(tempAnalog, 0, ADCBits, -40, 150);
-}
-
-float calcTempDifferential() {
-  // TODO: FIX ME
-  float periwoundTemp = tempConversion(analogRead(periWoundTempPin));
-  float woundTemp = tempConversion(analogRead(woundTempPin));
-  return woundTemp - periwoundTemp;
-}
-
-void measureTemp() {
-  // TODO: FIX ME Measure temperature
-      // Measure periwound temperature
-      // Measure wound temperature
-      // Calculate temperperiWoundTempature difference
-  // If differential measurement increased by greater than 
-  // or equal to 1.5C
-
-  if (calcTempDifferential() >= tempThres) {
-    // Increment temperature count
-    if (EEPROM.read(tempAddress) == 255) { // This means this is the first measurement (empty EEPROM)
-      EEPROM.write(tempAddress, 1);
-    } else { // Increment temperature count
-      EEPROM.write(tempAddress, EEPROM.read(tempAddress) + 1);
-    }
-    // If temperature count is greater than or equal to 12
-    // Turn on temperature indicator light and audio signal
-    if (EEPROM.read(tempAddress) >= tempWindowSize) {
-      // Turn on temperature indicator light and audio signal
-      digitalWrite(tempLEDPin, HIGH);
-      digitalWrite(buzzPin, HIGH);
-    }
-  } else { // Clear temperature count
-    EEPROM.write(tempAddress, 0);
-  }
-}
-
 void check72Hour() {
-  // Check if device on time has reached 72 hour limit
+  /*
+    Check if device on time has reached 72 hour limit.
+    If so, turn on indicators
+  */
   if(currentTime >= (startTime + seventyTwoHours) ) {
-    // while (millis() - currentTime < fiveMins) { // Signal for 5 mins
     digitalWrite(timeLEDPin, HIGH);
     digitalWrite(buzzPin, HIGH);
-    // }
-    // turnOff();
   }
 }
 
@@ -142,25 +67,10 @@ void loop() {
   currentTime = millis();
   if (currentTime >= (loopStartTime + fiveMins)) { // Only enter if its been 5 mins since last run
     loopStartTime = millis(); // Reset
-    measureImpedance();
-    measureTemp();
+    measuredValueLogic(calcImpedance(analogRead(impedancePin2), analogRead(impedancePin1)), impedanceThres,
+      impedanceWindowSize, impedanceAddress, moistLEDPin, buzzPin);
+    measuredValueLogic(calcTempDifferential(analogRead(periWoundTempPin), analogRead(woundTempPin)),
+      tempThres, tempWindowSize, tempAddress, tempLEDPin, buzzPin);
     check72Hour();
   }
 }
-
-
-
-// void powerOffDevice() {
-//   // Turn off buzzers and LED lights
-//   digitalWrite(pwrLEDPin, LOW);
-//   digitalWrite(tempLEDPin, LOW);
-//   digitalWrite(moistLEDPin, LOW);
-//   digitalWrite(timeLEDPin, LOW);
-//   digitalWrite(buzzPin, LOW);
-// }
-
-// void turnOff() {
-//   EEPROM.read(pwrAddress) == 0; // Mark as turned off
-//   exit(0);
-// }
-
