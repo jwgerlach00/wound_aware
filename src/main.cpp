@@ -13,8 +13,8 @@ int buzzPin = PB2;
 
 int periWoundTempPin = PC0;
 int woundTempPin = PC1;
-int impedancePin1 = ADCH6; // ADC6
-int impedancePin2 = ADCH7; // ADC7
+int impedancePin1 = PC2;
+int impedancePin2 = PC3;
 
 int ADCBits = 1023; // 10-bit ADC
 
